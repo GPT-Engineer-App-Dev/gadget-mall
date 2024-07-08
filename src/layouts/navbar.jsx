@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,9 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CircleUser, Menu, Package2 } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import Footer from "@/components/Footer";
 import { navItems } from "../App";
 
@@ -19,13 +22,14 @@ const Layout = () => {
     <div className="flex min-h-screen w-full flex-col">
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between">
         <DesktopNav />
+        <SearchBar />
         <MobileNav />
         <UserMenu />
       </header>
       <main className="flex-grow overflow-auto">
         <Outlet />
       </main>
-    <Footer />
+      <Footer />
     </div>
   );
 };
@@ -109,5 +113,55 @@ const NavItem = ({ to, children, className }) => (
     {children}
   </NavLink>
 );
+
+const SearchBar = () => {
+  const [query, setQuery] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (query.length > 0) {
+      fetch("/api/products")
+        .then((response) => response.json())
+        .then((data) => {
+          const filtered = data.filter((product) =>
+            product.name.toLowerCase().includes(query.toLowerCase())
+          );
+          setFilteredProducts(filtered);
+        })
+        .catch((error) => console.error("Error fetching products:", error));
+    } else {
+      setFilteredProducts([]);
+    }
+  }, [query]);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Input
+          placeholder="Search products..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-64"
+        />
+      </PopoverTrigger>
+      {filteredProducts.length > 0 && (
+        <PopoverContent className="w-64 p-2">
+          <ul>
+            {filteredProducts.map((product) => (
+              <li
+                key={product.id}
+                className="cursor-pointer hover:bg-muted p-2"
+                onClick={() => navigate(`/products/${product.id}`)}
+              >
+                {product.name}
+              </li>
+            ))}
+          </ul>
+        </PopoverContent>
+      )}
+    </Popover>
+  );
+};
 
 export default Layout;
